@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>なんびき かくれた？ — まとまりカウントゲーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6efdf;
+  --paper2:#fdf8ec;
+  --ink:#6b5337;
+  --ink-soft:#9c8264;
+  --pink:#f4c7c3;
+  --mint:#cfe3cf;
+  --sky:#cfe0ea;
+  --lemon:#f7e6a8;
+  --orange:#f0b884;
+  --red:#d9806c;
+  --shadow:0 4px 0 rgba(107,83,55,.18);
+  --wobble1:255px 18px 225px 18px / 18px 225px 18px 255px;
+  --wobble2:18px 225px 18px 255px / 255px 18px 225px 18px;
+  --wobble3:120px 16px 160px 18px / 18px 150px 16px 120px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{
+  min-height:100%;
+  background-color:var(--paper);
+  background-image:
+    radial-gradient(rgba(107,83,55,.05) 1.2px, transparent 1.2px),
+    radial-gradient(rgba(107,83,55,.04) 1.2px, transparent 1.2px);
+  background-size:26px 26px, 26px 26px;
+  background-position:0 0, 13px 13px;
+}
+body{
+  font-family:'Zen Maru Gothic','Yusei Magic',sans-serif;
+  color:var(--ink);
+  display:flex;align-items:flex-start;justify-content:center;
+  user-select:none;-webkit-user-select:none;
+  overflow-y:auto;
+  padding:16px 8px 32px;
+}
+button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none;}
+button:focus-visible{outline:4px dashed var(--red);outline-offset:3px;}
+
+#stage{
+  width:min(980px,100%);
+  position:relative;
+}
+.screen{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:18px;
+  padding:10px 4px;
+}
+.hidden{display:none!important;}
+
+/* ===== てがき風パーツ ===== */
+.handwrite{font-family:'Yusei Magic','Zen Maru Gothic',sans-serif;}
+.wobble-card{
+  background:var(--paper2);
+  border:3px solid var(--ink);
+  border-radius:var(--wobble1);
+  box-shadow:var(--shadow);
+}
+
+/* ===== スタートがめん ===== */
+#start-screen .title{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(34px,6.4vw,58px);
+  line-height:1.25;
+  text-align:center;
+  transform:rotate(-1.5deg);
+}
+#start-screen .title .small{font-size:.45em;display:block;color:var(--ink-soft);letter-spacing:.18em;margin-bottom:4px;}
+.speech{
+  position:relative;
+  background:#fff;
+  border:3px solid var(--ink);
+  border-radius:var(--wobble3);
+  padding:14px 22px;
+  font-size:clamp(15px,2.4vw,19px);
+  line-height:1.9;
+  max-width:560px;
+  text-align:center;
+  box-shadow:var(--shadow);
+}
+.speech::after{
+  content:"";position:absolute;left:50%;bottom:-14px;transform:translateX(-50%) rotate(3deg);
+  width:0;height:0;border:12px solid transparent;border-top:16px solid var(--ink);
+}
+.speech::before{
+  content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%) rotate(3deg);
+  width:0;height:0;border:10px solid transparent;border-top:13px solid #fff;z-index:1;
+}
+.big-btn{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(24px,4vw,34px);
+  padding:18px 56px;
+  background:var(--lemon);
+  border:4px solid var(--ink);
+  border-radius:var(--wobble2);
+  box-shadow:0 6px 0 rgba(107,83,55,.3);
+  transform:rotate(.6deg);
+  transition:transform .12s, box-shadow .12s;
+}
+.big-btn:active{transform:translateY(5px) rotate(.6deg);box-shadow:0 1px 0 rgba(107,83,55,.3);}
+.alien-row{display:flex;gap:14px;align-items:flex-end;}
+.alien-row svg{animation:bob 2.6s ease-in-out infinite;}
+.alien-row svg:nth-child(2){animation-delay:.4s;}
+.alien-row svg:nth-child(3){animation-delay:.9s;}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg);}50%{transform:translateY(-9px) rotate(2deg);}}
+
+/* ===== ゲームがめん ===== */
+#game-screen{justify-content:flex-start;gap:12px;}
+#hud{
+  width:100%;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.hud-card{
+  display:flex;align-items:baseline;gap:8px;
+  padding:8px 20px;
+  font-weight:900;
+  font-size:clamp(15px,2.4vw,20px);
+}
+.hud-card .num{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(26px,4.4vw,40px);
+  min-width:1.4em;text-align:center;
+}
+#time-card.hurry{background:var(--pink);animation:pulse .5s ease-in-out infinite alternate;}
+@keyframes pulse{from{transform:scale(1);}to{transform:scale(1.05);}}
+
+#question-bubble{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(14px,2.2vw,19px);
+  background:#fff;border:3px solid var(--ink);
+  border-radius:var(--wobble3);
+  padding:6px 18px;
+  transform:rotate(-.8deg);
+  box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:10px;
+  width:100%;
+}
+#question-bubble svg{flex:none;}
+
+/* ===== 3つのへや ===== */
+#rooms{
+  width:100%;
+  display:grid;
+  grid-template-columns:1.35fr 1fr .85fr;
+  gap:12px;
+}
+.room{
+  display:flex;flex-direction:column;
+  border:3px solid var(--ink);
+  box-shadow:var(--shadow);
+}
+.room-100{background:var(--sky);border-radius:26px 14px 22px 16px;}
+.room-10 {background:var(--mint);border-radius:14px 24px 16px 22px;}
+.room-1  {background:var(--pink);border-radius:22px 16px 26px 14px;}
+.room-label{
+  font-family:'Yusei Magic',sans-serif;
+  text-align:center;
+  font-size:clamp(13px,2vw,18px);
+  padding:6px 4px 4px;
+  border-bottom:3px dashed var(--ink-soft);
+  background:rgba(255,255,255,.45);
+  flex:none;
+}
+/* へやの中身は縦にのびる */
+.room-body{
+  padding:8px;
+  display:flex;flex-wrap:wrap;gap:7px;
+  align-content:flex-start;justify-content:center;
+  /* overflow:hidden を外し、高さを auto にして全部みえる */
+  min-height:60px;
+}
+.room.shake{animation:shake .45s;}
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-7px) rotate(-1deg);}
+  40%{transform:translateX(7px) rotate(1deg);}
+  60%{transform:translateX(-5px);}
+  80%{transform:translateX(5px);}
+}
+
+/* 100のかたまり */
+.block-100{
+  width:clamp(48px,7.4vw,72px);height:clamp(48px,7.4vw,72px);
+  background-color:#fffdf4;
+  background-image:radial-gradient(var(--ink-soft) 1.5px, transparent 1.6px);
+  background-size:10% 10%;
+  background-position:5% 5%;
+  border:2.5px solid var(--ink);
+  border-radius:9px 13px 10px 12px;
+  position:relative;
+  animation:pop .35s backwards;
+}
+.block-100 .face{position:absolute;right:-6px;top:-8px;}
+/* 10のたば */
+.block-10{
+  width:clamp(15px,2.3vw,21px);height:clamp(70px,11vw,108px);
+  background-color:#fffdf4;
+  background-image:radial-gradient(var(--ink-soft) 2px, transparent 2.1px);
+  background-size:100% 10%;
+  background-position:50% 5%;
+  border:2.5px solid var(--ink);
+  border-radius:9px 7px 8px 10px;
+  animation:pop .35s backwards;
+}
+/* 1のバラ */
+.block-1{width:clamp(30px,4.6vw,42px);height:clamp(34px,5.2vw,48px);animation:pop .35s backwards;}
+.block-1 svg{width:100%;height:100%;}
+@keyframes pop{from{transform:scale(0) rotate(-15deg);}to{transform:scale(1) rotate(0);}}
+
+/* ===== カウンター・けっていボタン ===== */
+#controls{
+  width:100%;
+  display:grid;
+  grid-template-columns:1.35fr 1fr .85fr;
+  gap:12px;
+}
+.counter{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:6px;
+  background:var(--paper2);
+  border:3px solid var(--ink);
+  border-radius:16px 22px 14px 24px;
+  box-shadow:var(--shadow);
+}
+.arrow-btn{
+  width:clamp(40px,6.4vw,58px);height:clamp(40px,6.4vw,58px);
+  font-size:clamp(20px,3vw,28px);
+  background:var(--lemon);
+  border:3px solid var(--ink);
+  border-radius:14px 18px 12px 20px;
+  box-shadow:0 4px 0 rgba(107,83,55,.28);
+  transition:transform .08s, box-shadow .08s, opacity .15s;
+  line-height:1;
+}
+.arrow-btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(107,83,55,.28);}
+.arrow-btn:disabled{opacity:.3;cursor:default;}
+.counter .value{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(30px,5vw,48px);
+  width:1.5em;text-align:center;
+  background:#fff;border:3px solid var(--ink);
+  border-radius:12px 16px 10px 18px;
+  line-height:1.35;
+}
+#gacchanko{
+  width:min(440px,86%);
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(24px,4vw,36px);
+  padding:12px 10px 14px;
+  background:var(--orange);
+  border:4px solid var(--ink);
+  border-radius:var(--wobble2);
+  box-shadow:0 7px 0 rgba(107,83,55,.32);
+  transform:rotate(-.5deg);
+  transition:transform .1s, box-shadow .1s;
+}
+#gacchanko:active{transform:translateY(6px) rotate(-.5deg);box-shadow:0 1px 0 rgba(107,83,55,.32);}
+
+/* ===== ガッチャンコ アニメ ===== */
+#merge-layer{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(246,239,223,.9);
+  z-index:30;
+}
+.digit-card{
+  position:absolute;top:50%;
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(56px,10vw,96px);
+  background:#fff;border:4px solid var(--ink);
+  box-shadow:var(--shadow);
+  padding:6px 26px;line-height:1.2;
+  transition:left .55s cubic-bezier(.5,-.3,.4,1.3), transform .55s;
+}
+.digit-h{left:18%;transform:translate(-50%,-50%) rotate(-5deg);border-radius:20px 12px 18px 14px;background:var(--sky);}
+.digit-t{left:50%;transform:translate(-50%,-50%) rotate(2deg);border-radius:12px 20px 14px 18px;background:var(--mint);}
+.digit-o{left:82%;transform:translate(-50%,-50%) rotate(6deg);border-radius:18px 14px 20px 12px;background:var(--pink);}
+#merge-layer.merge .digit-h{left:43%;transform:translate(-50%,-50%) rotate(-2deg);}
+#merge-layer.merge .digit-t{left:50%;transform:translate(-50%,-50%) rotate(0deg);}
+#merge-layer.merge .digit-o{left:57%;transform:translate(-50%,-50%) rotate(2deg);}
+#merged-wrap{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  animation:boing .5s;
+}
+#merged-reading{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(17px,3vw,26px);
+  background:#fff;border:3px solid var(--ink);
+  border-radius:30px 14px 26px 16px;
+  padding:4px 20px;
+  letter-spacing:.08em;
+  box-shadow:var(--shadow);
+  transform:rotate(1deg);
+}
+#merged-number{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(80px,15vw,150px);
+  background:var(--lemon);
+  border:5px solid var(--ink);
+  border-radius:var(--wobble3);
+  padding:8px 44px;
+  box-shadow:0 8px 0 rgba(107,83,55,.3);
+}
+@keyframes boing{
+  0%{transform:scale(.2) rotate(-8deg);}
+  60%{transform:scale(1.15) rotate(3deg);}
+  100%{transform:scale(1) rotate(0);}
+}
+
+/* ===== せいかい / おろろ ===== */
+#feedback-layer{
+  position:fixed;inset:0;z-index:40;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  background:rgba(246,239,223,.9);
+}
+#feedback-text{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(54px,10vw,100px);
+  transform:rotate(-2deg);
+  animation:boing .45s;
+}
+#feedback-text.good{color:#cb6a52;}
+#feedback-text.bad{color:#7e93a8;animation:wobblefall .7s;}
+#feedback-sub{font-size:clamp(17px,2.8vw,24px);font-weight:700;}
+@keyframes wobblefall{
+  0%{transform:rotate(-2deg) translateY(-30px);}
+  40%{transform:rotate(4deg) translateY(8px);}
+  70%{transform:rotate(-3deg) translateY(-4px);}
+  100%{transform:rotate(-2deg) translateY(0);}
+}
+.jump-aliens{display:flex;gap:24px;}
+.jump-aliens svg{animation:jump .55s ease-in-out infinite alternate;}
+.jump-aliens svg:nth-child(2){animation-delay:.12s;}
+.jump-aliens svg:nth-child(3){animation-delay:.24s;}
+@keyframes jump{from{transform:translateY(0) rotate(-4deg);}to{transform:translateY(-26px) rotate(5deg);}}
+.zukkoke svg{animation:zukkoke .7s forwards;}
+@keyframes zukkoke{
+  0%{transform:rotate(0);}
+  60%{transform:rotate(82deg) translateY(8px);}
+  100%{transform:rotate(78deg) translateY(10px);}
+}
+
+/* ===== けっかがめん ===== */
+#result-screen .end-title{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(40px,7vw,66px);
+  transform:rotate(-1.5deg);
+}
+#result-card{
+  padding:26px 44px;
+  text-align:center;
+  font-size:clamp(18px,3vw,26px);
+  line-height:2;
+  font-weight:700;
+}
+#result-card .big-score{
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(56px,9vw,92px);
+  color:#cb6a52;
+  line-height:1.3;
+}
+#level-badge{
+  display:inline-block;
+  margin:10px 0 2px;
+  font-family:'Yusei Magic',sans-serif;
+  font-size:clamp(20px,3.6vw,30px);
+  line-height:1.4;
+  background:var(--lemon);
+  border:3px solid var(--ink);
+  border-radius:16px 26px 14px 24px;
+  padding:8px 24px;
+  transform:rotate(-1deg);
+  box-shadow:var(--shadow);
+  animation:boing .55s;
+}
+#level-badge::before{
+  content:"あなたは…";
+  display:block;
+  font-size:.55em;
+  color:var(--ink-soft);
+  letter-spacing:.15em;
+}
+#confetti-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:5;}
+.confetti{
+  position:absolute;top:-30px;
+  font-size:24px;
+  animation:fall linear forwards;
+}
+@keyframes fall{
+  to{transform:translateY(110vh) rotate(540deg);}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ===== スタートがめん ===== -->
+  <div id="start-screen" class="screen">
+    <h1 class="title">
+      <span class="small">まとまりカウントゲーム</span>
+      なんびき かくれた？
+    </h1>
+    <div class="alien-row" id="start-aliens"></div>
+    <div class="speech">
+      うちゅうじんたちが ちきゅうで <b>かくれんぼ</b>！<br>
+      100ぴきは「100シート」に、10ぴきは「10のたば」に ぎゅっと へんしんして かくれたよ。<br>
+      きみは <b>せんちょうの ほうこくがかり</b>。<br>
+      ぜんぶで なんびき かくれたか、すうじを あわせて ほうこくしよう！<br>
+      <b>1ぷんかんで なんもん ほうこくできるかな？</b>
+    </div>
+    <button class="big-btn" id="start-btn">はじめる！</button>
+  </div>
+
+  <!-- ===== ゲームがめん ===== -->
+  <div id="game-screen" class="screen hidden">
+    <div id="hud">
+      <div class="hud-card wobble-card" id="time-card">
+        ⏰ のこり <span class="num" id="time-num">60</span> びょう
+      </div>
+      <div class="hud-card wobble-card">
+        ⭐ スコア <span class="num" id="score-num">0</span> もん
+      </div>
+    </div>
+
+    <div id="question-bubble"><span id="captain"></span><span>せんちょう「なんびき かくれたか ほうこくして！」</span></div>
+
+    <div id="rooms">
+      <div class="room room-100" id="room-h">
+        <div class="room-label">100の へや</div>
+        <div class="room-body" id="body-h"></div>
+      </div>
+      <div class="room room-10" id="room-t">
+        <div class="room-label">10の へや</div>
+        <div class="room-body" id="body-t"></div>
+      </div>
+      <div class="room room-1" id="room-o">
+        <div class="room-label">1の へや</div>
+        <div class="room-body" id="body-o"></div>
+      </div>
+    </div>
+
+    <div id="controls">
+      <div class="counter">
+        <button class="arrow-btn" data-room="h" data-dir="-1" aria-label="100のへやの かずを へらす">▼</button>
+        <div class="value" id="val-h">0</div>
+        <button class="arrow-btn" data-room="h" data-dir="1" aria-label="100のへやの かずを ふやす">▲</button>
+      </div>
+      <div class="counter">
+        <button class="arrow-btn" data-room="t" data-dir="-1" aria-label="10のへやの かずを へらす">▼</button>
+        <div class="value" id="val-t">0</div>
+        <button class="arrow-btn" data-room="t" data-dir="1" aria-label="10のへやの かずを ふやす">▲</button>
+      </div>
+      <div class="counter">
+        <button class="arrow-btn" data-room="o" data-dir="-1" aria-label="1のへやの かずを へらす">▼</button>
+        <div class="value" id="val-o">0</div>
+        <button class="arrow-btn" data-room="o" data-dir="1" aria-label="1のへやの かずを ふやす">▲</button>
+      </div>
+    </div>
+
+    <button id="gacchanko">ガッチャンコ！</button>
+  </div>
+
+  <!-- ===== ガッチャンコ アニメ ===== -->
+  <div id="merge-layer" class="hidden">
+    <div class="digit-card digit-h" id="dg-h">3</div>
+    <div class="digit-card digit-t" id="dg-t">5</div>
+    <div class="digit-card digit-o" id="dg-o">2</div>
+    <div id="merged-wrap" class="hidden">
+      <div id="merged-reading">さんびゃく ごじゅう に</div>
+      <div id="merged-number">352</div>
+    </div>
+  </div>
+
+  <!-- ===== せいかい / おろろ ===== -->
+  <div id="feedback-layer" class="hidden">
+    <div id="feedback-text">せいかい！</div>
+    <div id="feedback-aliens" class="jump-aliens"></div>
+    <div id="feedback-sub"></div>
+  </div>
+
+  <!-- ===== けっかがめん ===== -->
+  <div id="result-screen" class="screen hidden">
+    <div class="end-title">おしまい！</div>
+    <div id="result-card" class="wobble-card">
+      <div class="big-score"><span id="final-score">0</span>もん</div>
+      せいかい できたよ！<br>
+      <div id="level-badge">🛸 みならい うちゅうじん レベル！</div><br>
+      <span id="praise">すごーい！</span>
+    </div>
+    <div class="alien-row" id="result-aliens"></div>
+    <button class="big-btn" id="retry-btn">もういちど あそぶ</button>
+  </div>
+
+  <div id="confetti-layer"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var ALIEN_COLORS = ["#f4c7c3","#cfe3cf","#cfe0ea","#f7e6a8","#e6d3ef","#f0c9a8"];
+  function alienSVG(size, color, mood){
+    color = color || ALIEN_COLORS[Math.floor(Math.random()*ALIEN_COLORS.length)];
+    var mouth;
+    if(mood === "oro"){
+      mouth = '<ellipse cx="50" cy="68" rx="7" ry="9" fill="none" stroke="#6b5337" stroke-width="4"/>';
+    }else if(mood === "yay"){
+      mouth = '<path d="M38 64 Q50 78 62 64" fill="none" stroke="#6b5337" stroke-width="4" stroke-linecap="round"/>';
+    }else{
+      mouth = '<path d="M42 67 Q50 73 58 67" fill="none" stroke="#6b5337" stroke-width="4" stroke-linecap="round"/>';
+    }
+    return '<svg width="'+size+'" height="'+Math.round(size*1.15)+'" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">'
+      + '<line x1="50" y1="22" x2="50" y2="8" stroke="#6b5337" stroke-width="4" stroke-linecap="round"/>'
+      + '<circle cx="50" cy="7" r="6" fill="'+color+'" stroke="#6b5337" stroke-width="3.5"/>'
+      + '<path d="M50 22 C 22 22 14 48 16 72 C 18 98 36 108 50 108 C 64 108 82 98 84 72 C 86 48 78 22 50 22 Z" fill="'+color+'" stroke="#6b5337" stroke-width="4"/>'
+      + '<circle cx="37" cy="52" r="4.5" fill="#6b5337"/>'
+      + '<circle cx="63" cy="52" r="4.5" fill="#6b5337"/>'
+      + '<circle cx="29" cy="63" r="5" fill="#fff" opacity=".55"/>'
+      + '<circle cx="71" cy="63" r="5" fill="#fff" opacity=".55"/>'
+      + mouth
+      + '</svg>';
+  }
+  function faceBadge(){
+    return '<svg class="face" width="22" height="22" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">'
+      + '<circle cx="20" cy="20" r="17" fill="#fffdf4" stroke="#6b5337" stroke-width="3"/>'
+      + '<circle cx="14" cy="17" r="2.6" fill="#6b5337"/><circle cx="26" cy="17" r="2.6" fill="#6b5337"/>'
+      + '<path d="M14 25 Q20 30 26 25" fill="none" stroke="#6b5337" stroke-width="3" stroke-linecap="round"/>'
+      + '</svg>';
+  }
+
+  var actx = null;
+  function audio(){
+    if(!actx){ try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ actx=null; } }
+    if(actx && actx.state === "suspended"){ actx.resume(); }
+    return actx;
+  }
+  function tone(freq, start, dur, type, vol){
+    var ac = audio(); if(!ac) return;
+    var o = ac.createOscillator(), g = ac.createGain();
+    o.type = type || "triangle";
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || .15, ac.currentTime + start);
+    g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + start + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(ac.currentTime + start);
+    o.stop(ac.currentTime + start + dur + .05);
+  }
+  var snd = {
+    tick:   function(){ tone(660,0,.07,"square",.06); },
+    clack:  function(){ tone(220,0,.1,"square",.12); tone(160,.05,.12,"square",.12); },
+    good:   function(){ tone(660,0,.12); tone(880,.1,.14); tone(1100,.2,.22); },
+    oro:    function(){ tone(420,0,.18,"sawtooth",.08); tone(330,.15,.2,"sawtooth",.08); tone(250,.32,.3,"sawtooth",.08); },
+    finish: function(){ [523,659,784,1047].forEach(function(f,i){ tone(f,i*.13,.25); }); }
+  };
+
+  function $(id){ return document.getElementById(id); }
+  var startScreen=$("start-screen"), gameScreen=$("game-screen"), resultScreen=$("result-screen");
+  var mergeLayer=$("merge-layer"), feedbackLayer=$("feedback-layer");
+  var timeNum=$("time-num"), scoreNum=$("score-num"), timeCard=$("time-card");
+  var bodyH=$("body-h"), bodyT=$("body-t"), bodyO=$("body-o");
+  var valEls={h:$("val-h"), t:$("val-t"), o:$("val-o")};
+
+  var state = { playing:false, busy:false, score:0, time:60, timerId:null, target:{h:1,t:0,o:0}, answer:{h:0,t:0,o:0} };
+
+  function rand(n){ return Math.floor(Math.random()*n); }
+
+  var HYAKU=["","ひゃく","にひゃく","さんびゃく","よんひゃく","ごひゃく","ろっぴゃく","ななひゃく","はっぴゃく","きゅうひゃく"];
+  var JUU=["","じゅう","にじゅう","さんじゅう","よんじゅう","ごじゅう","ろくじゅう","ななじゅう","はちじゅう","きゅうじゅう"];
+  var ICHI=["","いち","に","さん","よん","ご","ろく","なな","はち","きゅう"];
+  function yomi(h,t,o){ return [HYAKU[h],JUU[t],ICHI[o]].filter(function(s){return s;}).join(" "); }
+
+  function newProblem(){
+    state.target = { h:1+rand(9), t:rand(10), o:rand(10) };
+    state.answer = { h:0, t:0, o:0 };
+    renderAnswer();
+    renderRooms();
+    // 新しい問題が出たらページトップへスクロール
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+  function renderAnswer(){
+    valEls.h.textContent = state.answer.h;
+    valEls.t.textContent = state.answer.t;
+    valEls.o.textContent = state.answer.o;
+    document.querySelectorAll(".arrow-btn").forEach(function(b){
+      var v = state.answer[b.dataset.room];
+      b.disabled = (b.dataset.dir==="1" && v>=9) || (b.dataset.dir==="-1" && v<=0);
+    });
+  }
+  function renderRooms(){
+    bodyH.innerHTML=""; bodyT.innerHTML=""; bodyO.innerHTML="";
+    var i, el;
+    for(i=0;i<state.target.h;i++){
+      el=document.createElement("div");
+      el.className="block-100";
+      el.style.animationDelay=(i*.05)+"s";
+      el.style.transform="rotate("+(rand(9)-4)+"deg)";
+      el.innerHTML=faceBadge();
+      bodyH.appendChild(el);
+    }
+    for(i=0;i<state.target.t;i++){
+      el=document.createElement("div");
+      el.className="block-10";
+      el.style.animationDelay=(i*.05)+"s";
+      el.style.transform="rotate("+(rand(11)-5)+"deg)";
+      bodyT.appendChild(el);
+    }
+    for(i=0;i<state.target.o;i++){
+      el=document.createElement("div");
+      el.className="block-1";
+      el.style.animationDelay=(i*.06)+"s";
+      el.style.transform="rotate("+(rand(31)-15)+"deg)";
+      el.innerHTML=alienSVG(44);
+      bodyO.appendChild(el);
+    }
+  }
+
+  document.querySelectorAll(".arrow-btn").forEach(function(b){
+    b.addEventListener("click", function(){
+      if(!state.playing || state.busy) return;
+      var r=b.dataset.room, d=parseInt(b.dataset.dir,10);
+      var nv=state.answer[r]+d;
+      if(nv<0||nv>9) return;
+      state.answer[r]=nv;
+      snd.tick();
+      renderAnswer();
+    });
+  });
+
+  $("gacchanko").addEventListener("click", function(){
+    if(!state.playing || state.busy) return;
+    state.busy = true;
+    var a=state.answer, t=state.target;
+    $("dg-h").textContent=a.h; $("dg-t").textContent=a.t; $("dg-o").textContent=a.o;
+    var mergedWrap=$("merged-wrap");
+    mergedWrap.classList.add("hidden");
+    ["dg-h","dg-t","dg-o"].forEach(function(id){ $(id).classList.remove("hidden"); });
+    mergeLayer.classList.remove("hidden");
+    mergeLayer.classList.remove("merge");
+    void mergeLayer.offsetWidth;
+    mergeLayer.classList.add("merge");
+    setTimeout(function(){
+      snd.clack();
+      ["dg-h","dg-t","dg-o"].forEach(function(id){ $(id).classList.add("hidden"); });
+      $("merged-reading").textContent = yomi(a.h, a.t, a.o);
+      $("merged-number").textContent = "" + a.h + a.t + a.o;
+      mergedWrap.classList.remove("hidden");
+    }, 600);
+    setTimeout(function(){
+      mergeLayer.classList.add("hidden");
+      mergeLayer.classList.remove("merge");
+      var ok = (a.h===t.h && a.t===t.t && a.o===t.o);
+      showFeedback(ok);
+    }, 1800);
+  });
+
+  function showFeedback(ok){
+    var txt=$("feedback-text"), sub=$("feedback-sub"), aliens=$("feedback-aliens");
+    feedbackLayer.classList.remove("hidden");
+    aliens.classList.remove("zukkoke");
+    if(ok){
+      state.score++;
+      scoreNum.textContent = state.score;
+      txt.textContent="せいかい！"; txt.className="good";
+      sub.textContent="ほうこく かんりょう！「"+ (""+state.target.h+state.target.t+state.target.o) +"びき」だ！";
+      aliens.innerHTML = alienSVG(86,null,"yay")+alienSVG(96,null,"yay")+alienSVG(86,null,"yay");
+      snd.good(); burstConfetti(14);
+    }else{
+      txt.textContent="おろろ？"; txt.className="bad";
+      sub.textContent="もういちど かぞえて みよう！";
+      aliens.innerHTML = alienSVG(96,null,"oro");
+      aliens.classList.add("zukkoke");
+      snd.oro();
+    }
+    setTimeout(function(){
+      feedbackLayer.classList.add("hidden");
+      state.busy=false;
+      if(!state.playing){ showResult(); return; }
+      if(ok){ newProblem(); }
+    }, ok ? 950 : 1100);
+  }
+
+  function burstConfetti(n){
+    var layer=$("confetti-layer");
+    var emo=["🌟","✨","🎉","💮","🪐","⭐"];
+    for(var i=0;i<n;i++){
+      var s=document.createElement("span");
+      s.className="confetti"; s.textContent=emo[rand(emo.length)];
+      s.style.left=rand(100)+"%";
+      s.style.animationDuration=(1.4+Math.random()*1.4)+"s";
+      s.style.fontSize=(16+rand(20))+"px";
+      layer.appendChild(s);
+      (function(node){ setTimeout(function(){ node.remove(); }, 3000); })(s);
+    }
+  }
+
+  function startTimer(){
+    state.time=60; timeNum.textContent=state.time; timeCard.classList.remove("hurry");
+    state.timerId=setInterval(function(){
+      state.time--; timeNum.textContent=state.time;
+      if(state.time<=10) timeCard.classList.add("hurry");
+      if(state.time<=0){
+        clearInterval(state.timerId); state.playing=false;
+        if(!state.busy) showResult();
+      }
+    },1000);
+  }
+
+  function levelFor(s){
+    if(s>=13) return "🌈 でんせつの かぞえしん";
+    if(s>=10) return "👑 ぎんがの かぞえキング";
+    if(s>=7)  return "🪐 かぞえマスター";
+    if(s>=4)  return "🚀 かぞえめいじん";
+    if(s>=1)  return "⭐ かぞえルーキー";
+    return "🛸 みならい うちゅうじん";
+  }
+  function praiseFor(s){
+    if(s>=10) return "てんさい かもしれない…！";
+    if(s>=7)  return "めちゃくちゃ はやい！すごーい！";
+    if(s>=4)  return "すごーい！その ちょうし！";
+    if(s>=1)  return "よく がんばったね！";
+    return "つぎは きっと ほうこくできるよ！";
+  }
+  function showResult(){
+    gameScreen.classList.add("hidden");
+    resultScreen.classList.remove("hidden");
+    $("final-score").textContent=state.score;
+    $("level-badge").textContent=levelFor(state.score)+" レベル！";
+    $("praise").textContent=praiseFor(state.score);
+    $("result-aliens").innerHTML=alienSVG(80,null,"yay")+alienSVG(92,null,"yay")+alienSVG(80,null,"yay");
+    snd.finish(); burstConfetti(24);
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+
+  function startGame(){
+    audio();
+    state.score=0; state.busy=false; state.playing=true;
+    scoreNum.textContent="0";
+    startScreen.classList.add("hidden");
+    resultScreen.classList.add("hidden");
+    gameScreen.classList.remove("hidden");
+    newProblem();
+    startTimer();
+  }
+  $("start-btn").addEventListener("click", startGame);
+  $("retry-btn").addEventListener("click", startGame);
+
+  $("start-aliens").innerHTML = alienSVG(74)+alienSVG(92,null,"yay")+alienSVG(74);
+})();
+</script>
+</body>
+</html>
